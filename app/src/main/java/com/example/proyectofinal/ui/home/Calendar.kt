@@ -1,23 +1,36 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.proyectofinal.ui.home
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Environment.getExternalStorageDirectory
 import android.provider.CalendarContract
+import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.net.toFile
 import com.example.proyectofinal.R
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_calendar.*
 import java.io.File
 import java.io.FileOutputStream
@@ -28,54 +41,67 @@ import java.util.*
 
 
 class Calendar : AppCompatActivity() {
+    private val PermissionsRequestCode = 123
+    private lateinit var managePermissions: ManagePermissions
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_calendar)
-        val button: Button = findViewById(R.id.button)
-        button.setOnClickListener()
-        { view ->
+// Initialize a list of required permissions to request runtime
+        val list = listOf<String>(
 
-            if (ActivityCompat.checkSelfPermission(this,android.Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED)
-            {
-                ActivityCompat.requestPermissions(this,arrayOf(android.Manifest.permission.READ_CONTACTS,android.Manifest.permission.WRITE_CALENDAR),10)
-                Toast.makeText(
-                    this,
-                    "nopermisos",
-                    Toast.LENGTH_SHORT)
-                return@setOnClickListener
-            }
-            val cursor =
-                contentResolver.query(CalendarContract.Events.CONTENT_URI, null, null, null, null)
-            if (cursor != null) {
-                while (cursor.moveToNext()) {
-                    val id =
-                        cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events._ID))
-                    val title =
-                        cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events.TITLE))
-                    val description =
-                        cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events.DESCRIPTION))
-                    Toast.makeText(
-                        this,
-                        "ID:$id Titulo:$title Descripcion: $description",
-                        Toast.LENGTH_SHORT
-                    )
+            Manifest.permission.WRITE_CALENDAR,
+            Manifest.permission.READ_CALENDAR
+        )
+
+        // Initialize a new instance of ManagePermissions class
+        managePermissions = ManagePermissions(this,list,PermissionsRequestCode)
+
+        // Button to check permissions states
+    }
+        //
+        @SuppressLint("MissingPermission")
+        override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>,
+                                                grantResults: IntArray) {
+
+            when (requestCode) {
+                PermissionsRequestCode ->{
+                    val isPermissionsGranted = managePermissions.processPermissionsResult(requestCode,permissions,grantResults)
+                    if(isPermissionsGranted){
+                        // Do the task now
+                        toast("Permissions granted.")
+                        val tv = tv1
+
+                        val cursor = contentResolver.query(CalendarContract.Events.CONTENT_URI, null, null, null, null)
+                       // toast("Entro")
+                        while (cursor!!.moveToNext()) {
+                            if (cursor != null) {
+                                toast("Entrox2")
+                                val id =
+                                    cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events._ID))
+                                val title =
+                                    cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events.TITLE))
+                                val description =
+                                    cursor.getColumnName(cursor.getColumnIndex(CalendarContract.Events.DESCRIPTION))
+                               toast("ID:$id Titulo:$title Descripcion: $description")
+
+                                tv.text = "ID:$id Titulo:$title Descripcion: $description"
+                                  //  .makeText(this,"ID:$id Titulo:$title Descripcion: $description",Toast.LENGTH_SHORT)
+                            }
+                        }
+                    }else{
+                        toast("Permissions denied.")
+                    }
+                    return
                 }
-            } else {
-                print("WRONG")
-                Toast.makeText(
-                    this,
-                    "asdasd",
-                    Toast.LENGTH_SHORT)
             }
         }
-
-
-
-    }
-
+        //
     fun Read(view: View)
     {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            managePermissions.checkPermissions()
+        }
 
     }
     fun getOutputDirectory(context: Context): File {
@@ -87,12 +113,16 @@ class Calendar : AppCompatActivity() {
     }
 
     fun Write(view:View) {
-       // val uri = bitmapToFile(takeScreenshotOfView(view,100,110))
-        val uri2=saveImageToExternalStorage(takeScreenshotOfView(view,900,500))
-        //image_view_file.setImageURI(uri)
-        val tv=tv1
-      //  tv.text=uri.toString()
-        tv.text=uri2.toString()
+
+        val uri2 = saveImageToExternalStorage(takeScreenshotOfView(view.rootView, 2160, 1080))
+        val tv = tv1
+        tv.text = uri2.toString()
+        MediaScannerConnection.scanFile(this,  arrayOf(uri2.toString()) , arrayOf( "image/jpeg" ), null)
+        intent=Intent(ACTION_MEDIA_SCANNER_SCAN_FILE)
+        intent.setData(uri2);
+        sendBroadcast(intent);
+
+
     }
     fun takeScreenshotOfView(view: View, height: Int, width: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -104,6 +134,7 @@ class Calendar : AppCompatActivity() {
             canvas.drawColor(Color.WHITE)
         }
         view.draw(canvas)
+
         return bitmap
     }
     fun isExternalStorageWritable(): Boolean {
@@ -147,7 +178,19 @@ class Calendar : AppCompatActivity() {
             e.printStackTrace()
             toast("Error to save image.")
         }
+//
+        //
+        // Get the image from drawable resource as drawable object
+        // Save image to gallery
+        val savedImageURL = MediaStore.Images.Media.insertImage(
+            contentResolver,
+            bitmap,
+            file.name,
+            "Image of ${file.name}"
+        )
 
+        //
+        //
         // Return the saved image path to uri
         return Uri.parse(file.absolutePath)
     }
