@@ -29,7 +29,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.net.toFile
+import androidx.preference.PreferenceManager
 import com.example.proyectofinal.R
+import com.example.proyectofinal.Singleton
+import com.example.proyectofinal.Singleton3
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_calendar.*
 import java.io.File
@@ -56,7 +59,31 @@ class Calendar : AppCompatActivity() {
 
         // Initialize a new instance of ManagePermissions class
         managePermissions = ManagePermissions(this,list,PermissionsRequestCode)
+        var cosas=""
+        for(x in 0 .. Singleton3.dataSet.size-1)
+        {
+            cosas=cosas+Singleton3.dataSet.get(x).nombre
 
+        }
+        tv1.text=cosas
+        btnAtacar.setOnClickListener()
+        {
+            toast("${Singleton.nombre}Ataca!")
+        }
+        button.setOnClickListener()
+        {
+            val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+            val name = sharedPreferences.getString("reply","nada!")
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, "Mi personaje ${Singleton.nombre} es un ${name}")
+                type = "text/plain"
+            }
+            // Verify that the intent will resolve to an activity
+            if (sendIntent.resolveActivity(packageManager) != null) {
+                startActivity(sendIntent)
+            }
+        }
         // Button to check permissions states
     }
         //

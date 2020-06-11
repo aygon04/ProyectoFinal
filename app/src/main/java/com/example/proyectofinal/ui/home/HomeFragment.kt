@@ -16,10 +16,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import com.example.proyectofinal.PersonajeViewModel
-import com.example.proyectofinal.PersonajeViewModelFactory
-import com.example.proyectofinal.R
-import com.example.proyectofinal.Singleton
+import androidx.recyclerview.widget.RecyclerView
+import com.example.proyectofinal.*
 import com.example.proyectofinal.data.PersonajeDatabase
 import com.example.proyectofinal.data.PersonajeRepository
 import kotlinx.android.synthetic.main.fragment_home.*
@@ -44,10 +42,19 @@ class HomeFragment : Fragment() {
 
         val root = inflater.inflate(R.layout.fragment_home, container, false)
         val boton=root.findViewById<Button>(R.id.button2)
+        val boton2=root.findViewById<Button>(R.id.btnCompra)
         boton.setOnClickListener()
         {
             view ->
             val intent = Intent(this.context, Calendar::class.java).apply {
+
+            }
+            startActivity(intent)
+        }
+        boton2.setOnClickListener()
+        {
+                view ->
+            val intent = Intent(this.context, Main2Activity::class.java).apply {
 
             }
             startActivity(intent)
